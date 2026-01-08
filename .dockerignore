@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Build output
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test files
+*_test.go
+*.test
+
+# Documentation
+*.md
+!README.md
+
+# Docker files (don't include in context)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Local config (mount instead)
+config.local.*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage.out
+*.cover
