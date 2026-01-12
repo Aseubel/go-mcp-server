@@ -18,7 +18,7 @@ func main() {
 
 	r := router.Setup(srv)
 
-	port := "8080"
+	port := "11611"
 	log.Printf("Starting MCP server on :%s", port)
 	log.Printf("  - Streamable HTTP: POST /mcp (recommended)")
 	log.Printf("  - Legacy SSE: GET /sse + POST /messages")
