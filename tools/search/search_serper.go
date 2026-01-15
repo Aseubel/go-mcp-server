@@ -23,17 +23,24 @@ type SerperSearchResponse struct {
 	} `json:"organic"`
 }
 
-func (p *SerperProvider) Search(ctx context.Context, query string) (string, error) {
+func (p *SerperProvider) Search(ctx context.Context, query string, options *SearchOptions) ([]SearchResultItem, error) {
 	if p.APIKey == "" {
-		return "", fmt.Errorf("search configuration (api_key) is missing")
+		return nil, fmt.Errorf("search configuration (api_key) is missing")
 	}
 
 	url := "https://google.serper.dev/search"
-	payload := strings.NewReader(fmt.Sprintf(`{"q":"%s"}`, query))
+
+	num := 10
+	if options != nil && options.MaxResults > 0 {
+		num = options.MaxResults
+	}
+
+	payloadStr := fmt.Sprintf(`{"q":"%s", "num": %d}`, query, num)
+	payload := strings.NewReader(payloadStr)
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, payload)
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	httpReq.Header.Add("X-API-KEY", p.APIKey)
@@ -42,30 +49,31 @@ func (p *SerperProvider) Search(ctx context.Context, query string) (string, erro
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		return "", fmt.Errorf("search request failed: %w", err)
+		return nil, fmt.Errorf("search request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("search API returned error status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("search API returned error status: %d", resp.StatusCode)
 	}
 
 	var searchResp SerperSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
-		return "", fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	if len(searchResp.Organic) == 0 {
-		return "No results found.", nil
+		return []SearchResultItem{}, nil
 	}
 
-	var resultText string
-	resultText = fmt.Sprintf("Found %d results for '%s':\n\n", len(searchResp.Organic), query)
-	for i, item := range searchResp.Organic {
-		if i >= 5 {
-			break
-		}
-		resultText += fmt.Sprintf("%d. %s\n   URL: %s\n   %s\n\n", i+1, item.Title, item.Link, item.Snippet)
+	results := make([]SearchResultItem, 0, len(searchResp.Organic))
+	for _, item := range searchResp.Organic {
+
+		results = append(results, SearchResultItem{
+			Title:   item.Title,
+			URL:     item.Link,
+			Content: item.Snippet,
+		})
 	}
-	return resultText, nil
+	return results, nil
 }

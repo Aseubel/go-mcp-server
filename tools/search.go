@@ -16,30 +16,25 @@ type SearchArgs struct {
 	Query string `json:"query" jsonschema:"required"`
 }
 
-// SearchProvider interface for different search engines
-type SearchProvider interface {
-	Search(ctx context.Context, query string) (string, error)
-}
-
 // SearchTool implements the web search tool
 type SearchTool struct {
 	Config   config.SearchConfig
-	Provider SearchProvider
+	Provider search_utils.Provider
 }
 
 // NewSearchTool creates a new search tool
 func NewSearchTool(cfg config.SearchConfig) *SearchTool {
-	var provider SearchProvider
+	var provider search_utils.Provider
 	switch strings.ToLower(cfg.Provider) {
-	case "bing":
-		provider = &search_utils.BingProvider{APIKey: cfg.APIKey}
+	case "google":
+		provider = &search_utils.GoogleProvider{APIKey: cfg.APIKey, CX: cfg.CX}
 	case "serper":
 		provider = &search_utils.SerperProvider{APIKey: cfg.APIKey}
 	case "bocha":
 		provider = &search_utils.BochaProvider{APIKey: cfg.APIKey}
 	default:
-		// Default to Google
-		provider = &search_utils.GoogleProvider{APIKey: cfg.APIKey, CX: cfg.CX}
+		// Default to Tavily
+		provider = &search_utils.TavilyProvider{APIKey: cfg.APIKey}
 	}
 	return &SearchTool{Config: cfg, Provider: provider}
 }
@@ -54,7 +49,7 @@ func (t *SearchTool) GetToolDef() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "web_search",
 		Description: desc,
-		InputSchema:  t.getInputSchema(),
+		InputSchema: t.getInputSchema(),
 	}
 }
 
@@ -79,7 +74,11 @@ func (t *SearchTool) Register(s *mcp.Server) {
 
 // Execute performs the search
 func (t *SearchTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args SearchArgs) (*mcp.CallToolResult, any, error) {
-	resultText, err := t.Provider.Search(ctx, args.Query)
+	options := &search_utils.SearchOptions{
+		MaxResults: 5,
+	}
+
+	items, err := t.Provider.Search(ctx, args.Query, options)
 	if err != nil {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -89,9 +88,26 @@ func (t *SearchTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args
 		}, nil, nil
 	}
 
+	var sb strings.Builder
+	if len(items) > 0 && items[0].Answer != "" {
+		sb.WriteString("AI Answer: ")
+		sb.WriteString(items[0].Answer)
+		sb.WriteString("\n\n")
+	}
+
+	for i, item := range items {
+		sb.WriteString(fmt.Sprintf("%d. %s\n", i+1, item.Title))
+		sb.WriteString(fmt.Sprintf("   URL: %s\n", item.URL))
+		sb.WriteString(fmt.Sprintf("   %s\n\n", item.Content))
+	}
+
+	if sb.Len() == 0 {
+		sb.WriteString("No results found.")
+	}
+
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
-			&mcp.TextContent{Text: resultText},
+			&mcp.TextContent{Text: sb.String()},
 		},
 	}, nil, nil
 }

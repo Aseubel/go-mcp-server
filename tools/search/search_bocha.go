@@ -28,19 +28,25 @@ type BochaSearchResponse struct {
 	} `json:"data"`
 }
 
-func (p *BochaProvider) Search(ctx context.Context, query string) (string, error) {
+func (p *BochaProvider) Search(ctx context.Context, query string, options *SearchOptions) ([]SearchResultItem, error) {
 	if p.APIKey == "" {
-		return "", fmt.Errorf("search configuration (api_key) is missing")
+		return nil, fmt.Errorf("search configuration (api_key) is missing")
 	}
 
 	url := "https://api.bochaai.com/v1/web-search"
-	// Request body: {"query": "...", "freshness": "noLimit", "summary": true, "count": 10}
-	payloadStr := fmt.Sprintf(`{"query":%q, "freshness": "noLimit", "summary": true, "count": 1}`, query)
+
+	count := 10
+	if options != nil && options.MaxResults > 0 {
+		count = options.MaxResults
+	}
+
+	// Request body: {"query": "...", "freshness": "noLimit", "summary": true, "count": 20}
+	payloadStr := fmt.Sprintf(`{"query":%q, "freshness": "noLimit", "summary": true, "count": %d}`, query, count)
 	payload := strings.NewReader(payloadStr)
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, payload)
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	httpReq.Header.Add("Authorization", "Bearer "+p.APIKey)
@@ -49,35 +55,36 @@ func (p *BochaProvider) Search(ctx context.Context, query string) (string, error
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		return "", fmt.Errorf("search request failed: %w", err)
+		return nil, fmt.Errorf("search request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("search API returned error status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("search API returned error status: %d", resp.StatusCode)
 	}
 
 	var searchResp BochaSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
-		return "", fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	if len(searchResp.Data.WebPages.Value) == 0 {
-		return "No results found.", nil
+		return []SearchResultItem{}, nil
 	}
 
-	var resultText string
-	resultText = fmt.Sprintf("Found %d results for '%s':\n\n", len(searchResp.Data.WebPages.Value), query)
-	for i, item := range searchResp.Data.WebPages.Value {
-		if i >= 5 {
-			break
-		}
+	results := make([]SearchResultItem, 0, len(searchResp.Data.WebPages.Value))
+	for _, item := range searchResp.Data.WebPages.Value {
 		// Use summary if available, otherwise snippet
 		content := item.Summary
 		if content == "" {
 			content = item.Snippet
 		}
-		resultText += fmt.Sprintf("%d. %s\n   URL: %s\n   %s\n\n", i+1, item.Name, item.Url, content)
+
+		results = append(results, SearchResultItem{
+			Title:   item.Name,
+			URL:     item.Url,
+			Content: content,
+		})
 	}
-	return resultText, nil
+	return results, nil
 }

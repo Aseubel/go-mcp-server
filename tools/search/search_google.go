@@ -24,9 +24,9 @@ type GoogleSearchResponse struct {
 	} `json:"items"`
 }
 
-func (p *GoogleProvider) Search(ctx context.Context, query string) (string, error) {
+func (p *GoogleProvider) Search(ctx context.Context, query string, options *SearchOptions) ([]SearchResultItem, error) {
 	if p.APIKey == "" || p.CX == "" {
-		return "", fmt.Errorf("search configuration (api_key or cx) is missing")
+		return nil, fmt.Errorf("search configuration (api_key or cx) is missing")
 	}
 
 	baseURL := "https://www.googleapis.com/customsearch/v1"
@@ -35,40 +35,50 @@ func (p *GoogleProvider) Search(ctx context.Context, query string) (string, erro
 	params.Add("cx", p.CX)
 	params.Add("q", query)
 
+	if options != nil {
+		if options.MaxResults > 0 {
+			if options.MaxResults > 10 {
+				options.MaxResults = 10 // Google API max is 10
+			}
+			params.Add("num", fmt.Sprintf("%d", options.MaxResults))
+		}
+	}
+
 	reqURL := fmt.Sprintf("%s?%s", baseURL, params.Encode())
 
 	httpReq, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		return "", fmt.Errorf("search request failed: %w", err)
+		return nil, fmt.Errorf("search request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("search API returned error status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("search API returned error status: %d", resp.StatusCode)
 	}
 
 	var searchResp GoogleSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
-		return "", fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	if len(searchResp.Items) == 0 {
-		return "No results found.", nil
+		return []SearchResultItem{}, nil
 	}
 
-	var resultText string
-	resultText = fmt.Sprintf("Found %d results for '%s':\n\n", len(searchResp.Items), query)
-	for i, item := range searchResp.Items {
-		if i >= 5 {
-			break
-		}
-		resultText += fmt.Sprintf("%d. %s\n   URL: %s\n   %s\n\n", i+1, item.Title, item.Link, item.Snippet)
+	results := make([]SearchResultItem, 0, len(searchResp.Items))
+	for _, item := range searchResp.Items {
+
+		results = append(results, SearchResultItem{
+			Title:   item.Title,
+			URL:     item.Link,
+			Content: item.Snippet,
+		})
 	}
-	return resultText, nil
+	return results, nil
 }
