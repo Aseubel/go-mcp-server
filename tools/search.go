@@ -58,7 +58,6 @@ func (t *SearchTool) getInputSchema() map[string]interface{} {
 		"type": "object",
 		"properties": map[string]interface{}{
 			"query": map[string]interface{}{
-				"type":        "string",
 				"description": "The search query",
 			},
 		},

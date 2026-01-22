@@ -59,7 +59,7 @@ func (p *TavilyProvider) Search(ctx context.Context, query string, options *Sear
 
 	if options != nil {
 		reqBody.SearchDepth = options.SearchDepth
-		reqBody.IncludeAnswer = options.IncludeAnswer
+		reqBody.IncludeAnswer = true
 		reqBody.IncludeRawContent = options.IncludeRawContent
 		reqBody.MaxResults = options.MaxResults
 		reqBody.IncludeImages = options.IncludeImages
