@@ -3,6 +3,9 @@
 # ====================
 FROM golang:1.25-alpine AS builder
 
+# Change to China mirror for apk
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates tzdata
 
@@ -11,6 +14,9 @@ WORKDIR /app
 
 # Copy go.mod and go.sum first for better caching
 COPY go.mod go.sum ./
+
+# Set GOPROXY for China
+ENV GOPROXY=https://goproxy.cn,direct
 
 # Download dependencies
 RUN go mod download
@@ -30,6 +36,9 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 # Stage 2: Runtime
 # ====================
 FROM alpine:3.20
+
+# Change to China mirror for apk
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
 # Install runtime dependencies
 RUN apk add --no-cache ca-certificates tzdata
