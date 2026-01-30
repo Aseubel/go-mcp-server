@@ -79,8 +79,19 @@ func (h *MCPHandler) processMethod(request jsonrpcRequest) interface{} {
 		return h.handleToolsList(request.Id)
 	case "tools/call":
 		return h.handleToolsCall(request.Id, request.Params)
+	case "ping":
+		return h.handlePing(request.Id)
 	default:
 		return h.errorResponse(request.Id, -32601, "Method not found")
+	}
+}
+
+// handlePing handles the ping method.
+func (h *MCPHandler) handlePing(id interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      id,
+		"result":  map[string]interface{}{},
 	}
 }
 
