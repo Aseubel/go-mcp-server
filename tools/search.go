@@ -74,7 +74,7 @@ func (t *SearchTool) Register(s *mcp.Server) {
 // Execute performs the search
 func (t *SearchTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args SearchArgs) (*mcp.CallToolResult, any, error) {
 	options := &search_utils.SearchOptions{
-		MaxResults: 5,
+		MaxResults: 2,
 	}
 
 	items, err := t.Provider.Search(ctx, args.Query, options)

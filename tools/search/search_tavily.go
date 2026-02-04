@@ -75,7 +75,7 @@ func (p *TavilyProvider) Search(ctx context.Context, query string, options *Sear
 
 	// Defaults if not set
 	if reqBody.MaxResults == 0 {
-		reqBody.MaxResults = 5
+		reqBody.MaxResults = 3
 	}
 	if reqBody.SearchDepth == "" {
 		reqBody.SearchDepth = "basic"
