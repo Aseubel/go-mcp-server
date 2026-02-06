@@ -35,7 +35,7 @@ func (p *BochaProvider) Search(ctx context.Context, query string, options *Searc
 
 	url := "https://api.bochaai.com/v1/web-search"
 
-	count := 10
+	count := 3
 	if options != nil && options.MaxResults > 0 {
 		count = options.MaxResults
 	}
