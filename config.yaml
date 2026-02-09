@@ -1,0 +1,11 @@
+server:
+  port: 11611
+  env: "dev"
+
+search:
+  provider: bocha
+  api_key: ""
+  cx: ""
+
+log:
+  level: "debug"

@@ -3,6 +3,8 @@ package search
 import (
 	"context"
 	"fmt"
+	"mcp/pkg/log"
+	"time"
 )
 
 // SearchType 搜索类型
@@ -109,7 +111,19 @@ func (s *Service) Search(ctx context.Context, searchType SearchType, query strin
 		return nil, fmt.Errorf("search provider '%s' not configured", searchType)
 	}
 
+	startTime := time.Now()
 	items, err := provider.Search(ctx, query, options)
+	duration := time.Since(startTime)
+
+	// 记录搜索调用信息、参数和耗时
+	log.Info("Search provider called",
+		"provider", searchType,
+		"query", query,
+		"options", options,
+		"duration", duration.String(),
+		"error", err,
+	)
+
 	if err != nil {
 		return nil, err
 	}

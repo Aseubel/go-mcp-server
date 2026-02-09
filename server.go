@@ -20,7 +20,7 @@ type RegisteredTool struct {
 
 type MCPServer struct {
 	Server *mcp.Server
-	Config config.MCPConfig
+	Config *config.MCPConfig
 	Tools  map[string]RegisteredTool
 }
 
@@ -47,7 +47,7 @@ func RegisterTool[T any](s *MCPServer, tool *mcp.Tool, handler func(context.Cont
 	}
 }
 
-func NewMCPServer(cfg config.MCPConfig) *MCPServer {
+func NewMCPServer(cfg *config.MCPConfig) *MCPServer {
 	s := mcp.NewServer(&mcp.Implementation{
 		Name:    "ai-ability-mcp",
 		Version: "1.0.0",

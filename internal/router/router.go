@@ -4,16 +4,30 @@ import (
 	"github.com/gin-gonic/gin"
 
 	mcp_impl "mcp"
+	"mcp/config"
 	"mcp/internal/handler"
 	"mcp/internal/middleware"
 )
 
-// Setup configures all routes for the MCP server.
-func Setup(server *mcp_impl.MCPServer) *gin.Engine {
-	r := gin.Default()
+// NewRouter 构建带中间件与全部路由的Gin路由
+func NewRouter(cfg *config.MCPConfig) *gin.Engine {
+	// 设置Gin模式
+	if cfg != nil && cfg.Server.Env == "prod" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
-	// Global middleware
-	r.Use(middleware.CORS())
+	router := gin.New()
+
+	// 中间件
+	router.Use(gin.Recovery())
+	router.Use(middleware.CORS())
+
+	return router
+}
+
+// Setup configures all routes for the MCP server.
+func Setup(cfg *config.MCPConfig, server *mcp_impl.MCPServer) *gin.Engine {
+	r := NewRouter(cfg)
 
 	// Health check
 	r.GET("/health", handler.Health)
