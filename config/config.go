@@ -36,37 +36,37 @@ type GrpcConfig struct {
 func Load() (*MCPConfig, error) {
 	v := viper.New()
 
-	// Config file setup
+	// 配置文件的寻找路径和名称
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
-	v.AddConfigPath(".")        // Look in current directory
-	v.AddConfigPath("./config") // Look in config directory
+	v.AddConfigPath(".")        // 在当前目录寻找
+	v.AddConfigPath("./config") // 在 config 目录寻找
 
-	// Default values
+	// 设置默认值
 	v.SetDefault("server.port", 11611)
 	v.SetDefault("server.env", "dev")
 	v.SetDefault("search.provider", "bocha")
 	v.SetDefault("grpc.backend_target", "localhost:9090")
 
-	// Log level
+	// 日志级别默认值
 	v.SetDefault("log.level", "debug")
 
-	// Environment variable setup
-	// mapping: search.provider -> SEARCH_PROVIDER
+	// 环境变量支持
+	// 将诸如 search.provider 映射为 SEARCH_PROVIDER 环境变量
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
-	// Read config
+	// 读取配置文件
 	if err := v.ReadInConfig(); err != nil {
-		// It's okay if config file doesn't exist, we fallback to env/defaults
+		// 如果配置文件不存在是可以接受的配置，我们降级使用环境变量和默认值
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, fmt.Errorf("error reading config file: %w", err)
+			return nil, fmt.Errorf("读取配置文件时发生错误: %w", err)
 		}
 	}
 
 	var cfg MCPConfig
 	if err := v.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("unable to decode into struct: %w", err)
+		return nil, fmt.Errorf("无法将解析出的配置映射为结构体: %w", err)
 	}
 
 	return &cfg, nil

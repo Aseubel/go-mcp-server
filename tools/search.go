@@ -11,18 +11,18 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// SearchArgs defines the arguments for the search tool
+// SearchArgs 定义了搜索工具的输入参数结构
 type SearchArgs struct {
 	Query string `json:"query" jsonschema:"required"`
 }
 
-// SearchTool implements the web search tool
+// SearchTool 实现了网络搜索工具
 type SearchTool struct {
 	Config   config.SearchConfig
 	Provider search_utils.Provider
 }
 
-// NewSearchTool creates a new search tool
+// NewSearchTool 创建一个新的 SearchTool
 func NewSearchTool(cfg config.SearchConfig) *SearchTool {
 	var provider search_utils.Provider
 	switch strings.ToLower(cfg.Provider) {
@@ -33,17 +33,17 @@ func NewSearchTool(cfg config.SearchConfig) *SearchTool {
 	case "bocha":
 		provider = &search_utils.BochaProvider{APIKey: cfg.APIKey}
 	default:
-		// Default to Tavily
+		// 默认为 Tavily
 		provider = &search_utils.TavilyProvider{APIKey: cfg.APIKey}
 	}
 	return &SearchTool{Config: cfg, Provider: provider}
 }
 
-// GetToolDef returns the MCP tool definition
+// GetToolDef 返回 MCP 工具的具体定义
 func (t *SearchTool) GetToolDef() *mcp.Tool {
-	desc := fmt.Sprintf("Search the internet for real-time information using %s. Use this tool when you need to find current events, facts, or information not present in your training data.", t.Config.Provider)
+	desc := fmt.Sprintf("使用 %s 在互联网上搜索实时信息。当你需要查找当前事件、事实或训练数据中不存在的最新信息时使用此工具。", t.Config.Provider)
 	if t.Config.Provider == "" {
-		desc = "Search the internet for real-time information using Google Search. Use this tool when you need to find current events, facts, or information not present in your training data."
+		desc = "使用 Google 搜索在互联网上搜索实时信息。当你需要查找当前事件、事实或训练数据中不存在的最新信息时使用此工具。"
 	}
 
 	return &mcp.Tool{
@@ -59,20 +59,20 @@ func (t *SearchTool) getInputSchema() map[string]interface{} {
 		"properties": map[string]interface{}{
 			"query": map[string]interface{}{
 				"type":        "string",
-				"description": "The search query string",
+				"description": "搜索查询字符串",
 			},
 		},
 		"required": []string{"query"},
 	}
 }
 
-// Register registers the tool with the MCP server
-// Deprecated: Use GetToolDef and server.RegisterTool instead
+// Register 将工具注册到 MCP Server
+// 已弃用：请直接使用 GetToolDef 并在 server 中调用 RegisterTool
 func (t *SearchTool) Register(s *mcp.Server) {
 	mcp.AddTool(s, t.GetToolDef(), t.Execute)
 }
 
-// Execute performs the search
+// Execute 真正执行搜索逻辑
 func (t *SearchTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args SearchArgs) (*mcp.CallToolResult, any, error) {
 	options := &search_utils.SearchOptions{
 		MaxResults: 2,
@@ -82,7 +82,7 @@ func (t *SearchTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args
 	if err != nil {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Error performing search: %v", err)},
+				&mcp.TextContent{Text: fmt.Sprintf("执行搜索时出错: %v", err)},
 			},
 			IsError: true,
 		}, nil, nil
@@ -90,7 +90,7 @@ func (t *SearchTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args
 
 	var sb strings.Builder
 	if len(items) > 0 && items[0].Answer != "" {
-		sb.WriteString("AI Answer: ")
+		sb.WriteString("AI 回答: ")
 		sb.WriteString(items[0].Answer)
 		sb.WriteString("\n\n")
 	}
@@ -102,7 +102,7 @@ func (t *SearchTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args
 	}
 
 	if sb.Len() == 0 {
-		sb.WriteString("No results found.")
+		sb.WriteString("未找到任何结果。")
 	}
 
 	return &mcp.CallToolResult{

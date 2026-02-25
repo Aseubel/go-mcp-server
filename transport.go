@@ -11,12 +11,12 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// TransportMap holds active SSE sessions
+// TransportMap 存储了当前活跃的 SSE session
 var TransportMap = sync.Map{}
 
-// SSEServerTransport implements mcp.Transport for Gin
+// SSEServerTransport 针对 Gin 实现了 mcp.Transport 接口
 type SSEServerTransport struct {
-	SendChan chan any // Keeping as any for json.Marshal flexibility, but Write takes jsonrpc.Message
+	SendChan chan any // 保持为 any 类型以提供 json.Marshal 灵活性, 但 Write 接收 jsonrpc.Message
 	recvChan chan jsonrpc.Message
 	id       string
 	closed   bool
@@ -33,12 +33,12 @@ func NewSSEServerTransport() *SSEServerTransport {
 	return t
 }
 
-// Connect implements mcp.Transport
+// Connect 实现 mcp.Transport 接口
 func (t *SSEServerTransport) Connect(ctx context.Context) (mcp.Connection, error) {
 	return t, nil
 }
 
-// Read implements mcp.Connection
+// Read 实现 mcp.Connection 接口
 func (t *SSEServerTransport) Read(ctx context.Context) (jsonrpc.Message, error) {
 	select {
 	case msg, ok := <-t.recvChan:
@@ -51,7 +51,7 @@ func (t *SSEServerTransport) Read(ctx context.Context) (jsonrpc.Message, error) 
 	}
 }
 
-// Write implements mcp.Connection
+// Write 实现 mcp.Connection 接口
 func (t *SSEServerTransport) Write(ctx context.Context, message jsonrpc.Message) error {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -66,7 +66,7 @@ func (t *SSEServerTransport) Write(ctx context.Context, message jsonrpc.Message)
 	}
 }
 
-// Close implements mcp.Connection
+// Close 实现 mcp.Connection 接口
 func (t *SSEServerTransport) Close() error {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -79,12 +79,12 @@ func (t *SSEServerTransport) Close() error {
 	return nil
 }
 
-// SessionID implements mcp.Connection
+// SessionID 实现 mcp.Connection 接口
 func (t *SSEServerTransport) SessionID() string {
 	return t.id
 }
 
-// HandleMessage is called by the POST handler to inject messages
+// HandleMessage 将被 POST 路由调用来注入客户端发来的消息
 func (t *SSEServerTransport) HandleMessage(msg jsonrpc.Message) {
 	t.mutex.Lock()
 	if t.closed {
@@ -92,11 +92,11 @@ func (t *SSEServerTransport) HandleMessage(msg jsonrpc.Message) {
 		return
 	}
 	t.mutex.Unlock()
-	
+
 	select {
 	case t.recvChan <- msg:
 	default:
-		// Blocking fallback
+		// 阻塞式的后备写入策略
 		t.recvChan <- msg
 	}
 }

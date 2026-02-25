@@ -10,7 +10,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// SearchDiaryArgs represents the arguments for the diarySearch tool
+// SearchDiaryArgs 定义了 diarySearch 工具的入参结构
 type SearchDiaryArgs struct {
 	UserID    string `json:"userId"`
 	Keyword   string `json:"keyword"`
@@ -18,23 +18,23 @@ type SearchDiaryArgs struct {
 	EndTime   string `json:"endTime,omitempty"`
 }
 
-// SearchDiaryTool executes the gRPC SearchDiary method
+// SearchDiaryTool 用于执行后端的 SearchDiary gRPC 方法
 type SearchDiaryTool struct{}
 
-// NewSearchDiaryTool creates a new SearchDiaryTool
+// NewSearchDiaryTool 创建一个新的 SearchDiaryTool 实例
 func NewSearchDiaryTool() *SearchDiaryTool {
 	return &SearchDiaryTool{}
 }
 
-// GetToolDef returns the MCP tool definition
+// GetToolDef 返回该工具在 MCP 中注册的定义
 func (t *SearchDiaryTool) GetToolDef() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "diarySearch",
-		Description: "Search user diaries by keyword and optional time range. Important: Ensure correct user ID is passed contextually. Supports fetching decrypted raw text from DB.",
+		Description: "根据关键词和可选的时间范围搜索用户的日记内容。重要提示：必须根据上下文传入正确的用户 ID。此工具支持从数据库拉取并解密原始文字内容。",
 	}
 }
 
-// Execute performs the diary search
+// Execute 真正执行日记搜索请求
 func (t *SearchDiaryTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args SearchDiaryArgs) (*mcp.CallToolResult, any, error) {
 	grpcReq := &pb.SearchDiaryRequest{
 		UserId:    args.UserID,
@@ -70,29 +70,29 @@ func (t *SearchDiaryTool) Execute(ctx context.Context, req *mcp.CallToolRequest,
 	}, nil, nil
 }
 
-// QueryLifeGraphArgs represents the arguments for the lifeGraph tool
+// QueryLifeGraphArgs 定义了 lifeGraph 工具的入参结构
 type QueryLifeGraphArgs struct {
 	UserID string `json:"userId"`
 	Query  string `json:"query"`
 }
 
-// QueryLifeGraphTool executes the gRPC QueryLifeGraph method
+// QueryLifeGraphTool 用于执行后端的 QueryLifeGraph gRPC 方法
 type QueryLifeGraphTool struct{}
 
-// NewQueryLifeGraphTool creates a new QueryLifeGraphTool
+// NewQueryLifeGraphTool 创建一个新的 QueryLifeGraphTool 实例
 func NewQueryLifeGraphTool() *QueryLifeGraphTool {
 	return &QueryLifeGraphTool{}
 }
 
-// GetToolDef returns the MCP tool definition
+// GetToolDef 返回该工具在 MCP 中注册的定义
 func (t *QueryLifeGraphTool) GetToolDef() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "lifeGraph",
-		Description: "Queries the user's life graph (spatio-temporal relationship knowledge base) for context on relationships, events, and nodes based on a query.",
+		Description: "查询用户的生命图谱（时空关系知识库），基于你的查询问题，获取关于人际关系、事件和重要实体的长程记忆上下文信息。",
 	}
 }
 
-// Execute performs the life graph query
+// Execute 真正执行生命图谱查询请求
 func (t *QueryLifeGraphTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args QueryLifeGraphArgs) (*mcp.CallToolResult, any, error) {
 	grpcReq := &pb.QueryLifeGraphRequest{
 		UserId: args.UserID,

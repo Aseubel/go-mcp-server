@@ -12,7 +12,7 @@ import (
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal("Failed to load config", "error", err)
+		log.Fatal("无法加载配置", "error", err)
 	}
 
 	// 初始化日志系统
@@ -23,8 +23,8 @@ func main() {
 	r := router.Setup(cfg, srv)
 
 	port := fmt.Sprintf("%d", cfg.Server.Port)
-	log.Info(fmt.Sprintf("Starting MCP server on :%s", port))
-	log.Info("  - Streamable HTTP: POST /mcp (recommended)")
-	log.Info("  - Legacy SSE: GET /sse + POST /messages")
+	log.Info(fmt.Sprintf("正在启动 MCP 服务，基于端口 :%s", port))
+	log.Info("  - Streamable HTTP 协议: POST /mcp (推荐)")
+	log.Info("  - 传统 SSE 协议: GET /sse + POST /messages")
 	r.Run(":" + port)
 }

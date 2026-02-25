@@ -1,59 +1,61 @@
-# MCP Server Integration
+# MCP Server 集成 (Model Context Protocol)
 
-This module implements the Model Context Protocol (MCP) Server for the AI Ability service.
-It allows the LLM to access external tools and data sources in a standardized way.
+本模块实现了针对 AI 能力服务的 Model Context Protocol (MCP) Server。
+它允许大语言模型 (LLM) 以标准化的方式访问外部工具和数据源。
 
-## Features
+## 功能特性
 
-- **Web Search**: Integrated web search using Bing, Serper, or Google.
-- **Database Query**: Safe, read-only SQL query execution against the application database.
-- **LLM Integration**: Direct integration with OpenAI Chat provider for high-performance tool execution.
+- **网络搜索**: 集成了基于 Bocha、Serper 或 Google 的网络实时搜索功能。
+- **与 Java 后端集成**: 通过 gRPC 连接到基础应用后端，实现双向数据交互和功能级扩展。
+- **特定工具扩展**:
+  - `diarySearch`: 根据关键词和可选的时间范围查询用户的日记内容。
+  - `lifeGraph`: 查询用户的生命图谱（时空关系知识库）以获取人物、事件的上下文关系。
 
-## Configuration
+## 配置说明
 
-Configure the MCP server in your `config.yaml` (or `config_local.yaml`):
+在你的 `config.yaml` 或系统环境变量中配置 MCP 服务：
 
 ```yaml
-mcp:
-  enabled: true
-  search:
-    provider: "bing" # bing, serper, google
-    api_key: "your-api-key"
-    cx: "your-google-cx" # only for google
+server:
+  port: 11611
+  env: "dev"
+
+search:
+  provider: "bocha" # 支持 bocha, serper, google 等
+  api_key: "your-api-key"
+  cx: "your-google-cx" # 仅用于 google 搜索
+
+grpc:
+  backend_target: "localhost:9090" # Java 后端 gRPC 地址
+
+log:
+  level: "debug"
 ```
 
-## Architecture
+## 架构设计
 
-The MCP Server is initialized in `main.go` and stored in the global context.
-The HTTP server registers MCP handlers to expose standard MCP endpoints.
-The LLM Provider (`LLMOpenAIChatProvider`) retrieves the MCP server from the context and injects registered tools into OpenAI requests.
+MCP Server 的核心在 `server.go` 中初始化。
+整个系统采用低耦合、易扩展的设计：
 
-### Low-Coupling Design
+- **基于接口的搜索机制**: `SearchTool` 内部定义了 `Provider` 接口，可以非常轻松地添加新的搜索引擎而不影响外部逻辑。
+- **无侵入的工具注册**: 工具的定义 (`GetToolDef`) 与执行 (`Execute`) 被解耦到专门的结构体中（见 `internal/tools` 和 `tools` 目录），并提供统一的注册口。
+- **与 Java 系统的无缝互调**: 基于 Protobuf / gRPC 进行跨语言通讯，可以直接查询、调用远端的业务核心域。
 
-- **Interface-based**: The `SearchTool` uses a `SearchProvider` interface, allowing easy addition of new search engines.
-- **Context-aware**: The MCP server is passed via context, decoupling the LLM provider from the MCP implementation details.
-- **Standardized Tools**: Tools are converted to standard OpenAI function definitions automatically.
+## 服务端点 (Endpoints)
 
-## Usage
+MCP Server 目前支持以下访问方式：
 
-### LLM Tool Use
+- **Streamable HTTP**: `POST /mcp` （推荐使用）
+- **传统 SSE 机制**: `GET /sse` 与 `POST /messages`
 
-When `mcp.enabled` is true, the OpenAI Chat provider will automatically:
-1. Detect registered MCP tools.
-2. Add them to the `tools` parameter in the Chat Completion API.
-3. Handle tool calls internally:
-   - Execute the tool using the MCP server.
-   - Feed the result back to the LLM.
-   - Continue the conversation until a final response is generated or max turns reached.
+可以在主应用或其他客户端中直接配置该 MCP 服务的访问 URL 进行调用。
 
-### HTTP Endpoints
+## 扩展与使用指南
 
-The MCP server also exposes standard MCP JSON-RPC endpoints (if enabled in routes):
-- `/mcp` (WebSocket or HTTP POST depending on transport)
+想要添加新的能力 / 工具？请遵循以下步骤：
 
-## Extending
-
-To add a new tool:
-1. Create a new tool struct in `mcp/tools/`.
-2. Implement `GetToolDef()` and `Execute()`.
-3. Register the tool in `mcp/server.go`.
+1. 在 `mcp/internal/tools` 或 `mcp/tools` 下创建一个新的工具结构体定义。
+2. 实现该工具的两个核心方法：
+   - `GetToolDef() *mcp.Tool`: 定义工具的名称、描述以及 JSON Schema 入参结构。
+   - `Execute(ctx, req, args) (*mcp.CallToolResult, any, error)`: 实现工具请求的具体处理逻辑。
+3. 在 `mcp/server.go` 的 `NewMCPServer` 函数中，使用 `RegisterTool` 进行工具注册。

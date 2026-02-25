@@ -26,12 +26,12 @@ type MCPServer struct {
 	Tools  map[string]RegisteredTool
 }
 
-// RegisterTool registers a tool with both the MCP server SDK and the internal registry
+// RegisterTool 将工具同时注册到 MCP server SDK 和内部注册表中
 func RegisterTool[T any](s *MCPServer, tool *mcp.Tool, handler func(context.Context, *mcp.CallToolRequest, T) (*mcp.CallToolResult, any, error)) {
-	// Register with SDK
+	// 向 SDK 注册
 	mcp.AddTool(s.Server, tool, handler)
 
-	// Register internally
+	// 内部注册
 	if s.Tools == nil {
 		s.Tools = make(map[string]RegisteredTool)
 	}
@@ -42,7 +42,7 @@ func RegisterTool[T any](s *MCPServer, tool *mcp.Tool, handler func(context.Cont
 			if err := json.Unmarshal(argsJSON, &args); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal args: %w", err)
 			}
-			// We pass nil for CallToolRequest as it's an internal call
+			// 我们对 CallToolRequest 传 nil，因为这是一个内部调用
 			res, _, err := handler(ctx, nil, args)
 			return res, err
 		},
@@ -61,17 +61,17 @@ func NewMCPServer(cfg *config.MCPConfig) *MCPServer {
 		Tools:  make(map[string]RegisteredTool),
 	}
 
-	// Register Tools
+	// 注册工具
 	if cfg.Search.Provider != "" {
 		searchTool := tools.NewSearchTool(cfg.Search)
 		RegisterTool(mcpSrv, searchTool.GetToolDef(), searchTool.Execute)
 	}
 
-	// Initialize backend gRPC connection
+	// 初始化后端 gRPC 连接
 	grpcTarget := cfg.Grpc.BackendTarget
 	grpc.InitClient(grpcTarget)
 
-	// Register Extension Tools
+	// 注册扩展工具 (Extension Tools)
 	diarySearchTool := ext_tools.NewSearchDiaryTool()
 	RegisterTool(mcpSrv, diarySearchTool.GetToolDef(), diarySearchTool.Execute)
 
@@ -81,7 +81,7 @@ func NewMCPServer(cfg *config.MCPConfig) *MCPServer {
 	return mcpSrv
 }
 
-// CallTool executes a registered tool by name
+// CallTool 根据工具名称执行已注册的工具
 func (s *MCPServer) CallTool(ctx context.Context, name string, argsJSON []byte) (*mcp.CallToolResult, error) {
 	tool, ok := s.Tools[name]
 	if !ok {
@@ -90,7 +90,7 @@ func (s *MCPServer) CallTool(ctx context.Context, name string, argsJSON []byte) 
 	return tool.Handler(ctx, argsJSON)
 }
 
-// GetTools returns all registered tools definitions
+// GetTools 返回所有已注册工具的定义
 func (s *MCPServer) GetTools() []*mcp.Tool {
 	tools := make([]*mcp.Tool, 0, len(s.Tools))
 	for _, t := range s.Tools {
