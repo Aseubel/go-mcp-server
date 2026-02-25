@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"mcp/config"
+	"mcp/internal/grpc"
+	ext_tools "mcp/internal/tools"
 	"mcp/tools"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -64,6 +66,17 @@ func NewMCPServer(cfg *config.MCPConfig) *MCPServer {
 		searchTool := tools.NewSearchTool(cfg.Search)
 		RegisterTool(mcpSrv, searchTool.GetToolDef(), searchTool.Execute)
 	}
+
+	// Initialize backend gRPC connection
+	grpcTarget := cfg.Grpc.BackendTarget
+	grpc.InitClient(grpcTarget)
+
+	// Register Extension Tools
+	diarySearchTool := ext_tools.NewSearchDiaryTool()
+	RegisterTool(mcpSrv, diarySearchTool.GetToolDef(), diarySearchTool.Execute)
+
+	lifeGraphTool := ext_tools.NewQueryLifeGraphTool()
+	RegisterTool(mcpSrv, lifeGraphTool.GetToolDef(), lifeGraphTool.Execute)
 
 	return mcpSrv
 }

@@ -11,6 +11,7 @@ services:
     environment:
       - GIN_MODE=release
       - TZ=Asia/Shanghai
+      - GRPC_BACKEND_TARGET=yusi:9090
     # volumes:
     #   - ./config:/app/config:ro  # 挂载配置文件（如需要）
     healthcheck:

@@ -10,11 +10,12 @@ import (
 type MCPConfig struct {
 	Server ServerConfig `mapstructure:"server"`
 	Search SearchConfig `mapstructure:"search"`
+	Grpc   GrpcConfig   `mapstructure:"grpc"`
 	Log    LogConfig    `mapstructure:"log"`
 }
 
 type ServerConfig struct {
-	Port int `mapstructure:"port"`
+	Port int    `mapstructure:"port"`
 	Env  string `mapstructure:"env"`
 }
 
@@ -26,6 +27,10 @@ type SearchConfig struct {
 
 type LogConfig struct {
 	Level string `mapstructure:"level"`
+}
+
+type GrpcConfig struct {
+	BackendTarget string `mapstructure:"backend_target"`
 }
 
 func Load() (*MCPConfig, error) {
@@ -41,6 +46,7 @@ func Load() (*MCPConfig, error) {
 	v.SetDefault("server.port", 11611)
 	v.SetDefault("server.env", "dev")
 	v.SetDefault("search.provider", "bocha")
+	v.SetDefault("grpc.backend_target", "localhost:9090")
 
 	// Log level
 	v.SetDefault("log.level", "debug")
