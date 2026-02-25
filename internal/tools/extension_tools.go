@@ -12,10 +12,10 @@ import (
 
 // SearchDiaryArgs represents the arguments for the diarySearch tool
 type SearchDiaryArgs struct {
-	UserID    string `json:"userId" jsonschema:"required,description=ID of the user"`
-	Keyword   string `json:"keyword" jsonschema:"required,description=Keyword to search in diary content"`
-	StartTime string `json:"startTime,omitempty" jsonschema:"description=Start time filter (yyyy-MM-dd HH:mm:ss)"`
-	EndTime   string `json:"endTime,omitempty" jsonschema:"description=End time filter (yyyy-MM-dd HH:mm:ss)"`
+	UserID    string `json:"userId"`
+	Keyword   string `json:"keyword"`
+	StartTime string `json:"startTime,omitempty"`
+	EndTime   string `json:"endTime,omitempty"`
 }
 
 // SearchDiaryTool executes the gRPC SearchDiary method
@@ -72,8 +72,8 @@ func (t *SearchDiaryTool) Execute(ctx context.Context, req *mcp.CallToolRequest,
 
 // QueryLifeGraphArgs represents the arguments for the lifeGraph tool
 type QueryLifeGraphArgs struct {
-	UserID string `json:"userId" jsonschema:"required,description=ID of the user"`
-	Query  string `json:"query" jsonschema:"required,description=Query to search the life graph context"`
+	UserID string `json:"userId"`
+	Query  string `json:"query"`
 }
 
 // QueryLifeGraphTool executes the gRPC QueryLifeGraph method
