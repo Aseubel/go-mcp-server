@@ -7,10 +7,11 @@
 package mcp_extension
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -25,7 +26,7 @@ type SearchDiaryRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	UserId  string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ApiKey  string `protobuf:"bytes,1,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
 	Keyword string `protobuf:"bytes,2,opt,name=keyword,proto3" json:"keyword,omitempty"`
 	// Format: yyyy-MM-dd HH:mm:ss. Can be empty.
 	StartTime string `protobuf:"bytes,3,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
@@ -65,9 +66,9 @@ func (*SearchDiaryRequest) Descriptor() ([]byte, []int) {
 	return file_proto_mcp_extension_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SearchDiaryRequest) GetUserId() string {
+func (x *SearchDiaryRequest) GetApiKey() string {
 	if x != nil {
-		return x.UserId
+		return x.ApiKey
 	}
 	return ""
 }
@@ -224,7 +225,7 @@ type QueryLifeGraphRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ApiKey string `protobuf:"bytes,1,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
 	Query  string `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
 }
 
@@ -260,9 +261,9 @@ func (*QueryLifeGraphRequest) Descriptor() ([]byte, []int) {
 	return file_proto_mcp_extension_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *QueryLifeGraphRequest) GetUserId() string {
+func (x *QueryLifeGraphRequest) GetApiKey() string {
 	if x != nil {
-		return x.UserId
+		return x.ApiKey
 	}
 	return ""
 }

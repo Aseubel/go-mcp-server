@@ -12,7 +12,6 @@ import (
 
 // SearchDiaryArgs 定义了 diarySearch 工具的入参结构
 type SearchDiaryArgs struct {
-	UserID    string `json:"userId"`
 	Keyword   string `json:"keyword"`
 	StartTime string `json:"startTime,omitempty"`
 	EndTime   string `json:"endTime,omitempty"`
@@ -30,14 +29,16 @@ func NewSearchDiaryTool() *SearchDiaryTool {
 func (t *SearchDiaryTool) GetToolDef() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "diarySearch",
-		Description: "根据关键词和可选的时间范围搜索用户的日记内容。重要提示：必须根据上下文传入正确的用户 ID。此工具支持从数据库拉取并解密原始文字内容。",
+		Description: "根据关键词和可选的时间范围搜索用户的日记内容。此工具支持从数据库拉取并解密原始文字内容。",
 	}
 }
 
 // Execute 真正执行日记搜索请求
 func (t *SearchDiaryTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args SearchDiaryArgs) (*mcp.CallToolResult, any, error) {
+	apiKey, _ := ctx.Value("apiKey").(string)
+
 	grpcReq := &pb.SearchDiaryRequest{
-		UserId:    args.UserID,
+		ApiKey:    apiKey,
 		Keyword:   args.Keyword,
 		StartTime: args.StartTime,
 		EndTime:   args.EndTime,
@@ -72,8 +73,7 @@ func (t *SearchDiaryTool) Execute(ctx context.Context, req *mcp.CallToolRequest,
 
 // QueryLifeGraphArgs 定义了 lifeGraph 工具的入参结构
 type QueryLifeGraphArgs struct {
-	UserID string `json:"userId"`
-	Query  string `json:"query"`
+	Query string `json:"query"`
 }
 
 // QueryLifeGraphTool 用于执行后端的 QueryLifeGraph gRPC 方法
@@ -94,8 +94,10 @@ func (t *QueryLifeGraphTool) GetToolDef() *mcp.Tool {
 
 // Execute 真正执行生命图谱查询请求
 func (t *QueryLifeGraphTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args QueryLifeGraphArgs) (*mcp.CallToolResult, any, error) {
+	apiKey, _ := ctx.Value("apiKey").(string)
+
 	grpcReq := &pb.QueryLifeGraphRequest{
-		UserId: args.UserID,
+		ApiKey: apiKey,
 		Query:  args.Query,
 	}
 

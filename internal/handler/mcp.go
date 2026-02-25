@@ -62,7 +62,7 @@ func (h *MCPHandler) Handle(c *gin.Context) {
 	c.Writer.Flush()
 
 	// Process MCP method
-	response := h.processMethod(request)
+	response := h.processMethod(c, request)
 
 	// Send SSE response
 	responseBytes, _ := json.Marshal(response)
@@ -71,14 +71,14 @@ func (h *MCPHandler) Handle(c *gin.Context) {
 }
 
 // processMethod routes the request to the appropriate handler.
-func (h *MCPHandler) processMethod(request jsonrpcRequest) interface{} {
+func (h *MCPHandler) processMethod(c *gin.Context, request jsonrpcRequest) interface{} {
 	switch request.Method {
 	case "initialize":
 		return h.handleInitialize(request.Id)
 	case "tools/list":
 		return h.handleToolsList(request.Id)
 	case "tools/call":
-		return h.handleToolsCall(request.Id, request.Params)
+		return h.handleToolsCall(c, request.Id, request.Params)
 	case "ping":
 		return h.handlePing(request.Id)
 	default:
@@ -134,14 +134,24 @@ func (h *MCPHandler) handleToolsList(id interface{}) map[string]interface{} {
 }
 
 // handleToolsCall handles the tools/call method.
-func (h *MCPHandler) handleToolsCall(id interface{}, params json.RawMessage) map[string]interface{} {
+func (h *MCPHandler) handleToolsCall(c *gin.Context, id interface{}, params json.RawMessage) map[string]interface{} {
 	var callParams toolCallParams
 	if err := json.Unmarshal(params, &callParams); err != nil {
 		return h.errorResponse(id, -32602, "Invalid params")
 	}
 
+	apiKey := c.GetHeader("X-API-Key")
+	if apiKey == "" {
+		apiKey = c.GetHeader("Authorization")
+		if len(apiKey) > 7 && apiKey[:7] == "Bearer " {
+			apiKey = apiKey[7:]
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
+	ctx = context.WithValue(ctx, "apiKey", apiKey)
 
 	result, err := h.server.CallTool(ctx, callParams.Name, callParams.Arguments)
 	if err != nil {
