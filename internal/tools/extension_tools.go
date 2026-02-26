@@ -30,6 +30,24 @@ func (t *SearchDiaryTool) GetToolDef() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "diarySearch",
 		Description: "根据关键词和可选的时间范围搜索用户的日记内容。此工具支持从数据库拉取并解密原始文字内容。",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"keyword": map[string]interface{}{
+					"type":        "string",
+					"description": "搜索关键词",
+				},
+				"startTime": map[string]interface{}{
+					"type":        "string",
+					"description": "开始时间 (格式: yyyy-MM-dd HH:mm:ss)",
+				},
+				"endTime": map[string]interface{}{
+					"type":        "string",
+					"description": "结束时间 (格式: yyyy-MM-dd HH:mm:ss)",
+				},
+			},
+			"required": []string{"keyword"},
+		},
 	}
 }
 
@@ -89,6 +107,16 @@ func (t *QueryLifeGraphTool) GetToolDef() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "lifeGraph",
 		Description: "查询用户的生命图谱（时空关系知识库），基于你的查询问题，获取关于人际关系、事件和重要实体的长程记忆上下文信息。",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"query": map[string]interface{}{
+					"type":        "string",
+					"description": "查询关键词",
+				},
+			},
+			"required": []string{"query"},
+		},
 	}
 }
 
