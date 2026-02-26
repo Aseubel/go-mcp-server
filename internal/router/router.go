@@ -18,9 +18,12 @@ func NewRouter(cfg *config.MCPConfig) *gin.Engine {
 
 	router := gin.New()
 
-	// 添加全局中间件: Recovery 与 CORS
+	// 添加全局中间件: Recovery, CORS, Auth
 	router.Use(gin.Recovery())
 	router.Use(middleware.CORS())
+	
+	// 使用 Auth 中间件提取 API Key (不进行本地校验，仅透传)
+	router.Use(middleware.Auth(""))
 
 	return router
 }

@@ -140,11 +140,20 @@ func (h *MCPHandler) handleToolsCall(c *gin.Context, id interface{}, params json
 		return h.errorResponse(id, -32602, "Invalid params")
 	}
 
-	apiKey := c.GetHeader("X-API-Key")
+	// 从中间件中获取 apiKey
+	apiKey := c.GetString("apiKey")
+	
+	// 如果中间件没有提取到（理论上不可能，如果中间件正确运行），尝试手动提取作为后备
 	if apiKey == "" {
-		apiKey = c.GetHeader("Authorization")
-		if len(apiKey) > 7 && apiKey[:7] == "Bearer " {
-			apiKey = apiKey[7:]
+		apiKey = c.Query("api_key")
+		if apiKey == "" {
+			apiKey = c.GetHeader("X-API-Key")
+		}
+		if apiKey == "" {
+			apiKey = c.GetHeader("Authorization")
+			if len(apiKey) > 7 && apiKey[:7] == "Bearer " {
+				apiKey = apiKey[7:]
+			}
 		}
 	}
 

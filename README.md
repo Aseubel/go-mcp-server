@@ -19,7 +19,7 @@
 server:
   port: 11611
   env: "dev"
-
+  
 search:
   provider: "bocha" # 支持 bocha, serper, google 等
   api_key: "your-api-key"
@@ -32,6 +32,40 @@ grpc:
 log:
   level: "debug"
 ```
+
+## 客户端配置示例
+
+### Claude Desktop (MacOS / Windows)
+
+本服务支持通过 SSE (Server-Sent Events) 协议接入 Claude Desktop。
+
+1. **启动服务**
+   
+   确保本服务已在本地启动（默认端口 11611）：
+   ```bash
+   go run cmd/server/main.go
+   # 或者运行编译后的二进制文件
+   ```
+
+2. **配置 Claude Desktop**
+
+   编辑配置文件：
+   - MacOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+   在 `mcpServers` 节点下添加配置：
+
+   ```json
+   {
+     "mcpServers": {
+       "yusi-mcp": {
+         "url": "http://localhost:11611/sse?api_key=your-secret-key"
+       }
+     }
+   }
+   ```
+
+   *注意：如果需要鉴权，必须在 URL 中携带 api_key（推荐）或者确保客户端支持通过 Authorization 头传递。该 Key 会被透传至后端服务进行验证。*
 
 ## 架构设计
 

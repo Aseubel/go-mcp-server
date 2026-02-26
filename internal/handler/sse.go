@@ -37,7 +37,10 @@ func (h *SSEHandler) Connect(c *gin.Context) {
 
 	// Start serving in a goroutine
 	go func() {
-		log.Println("MCP Server transport connected (legacy SSE)")
+		apiKey := c.GetString("apiKey")
+		log.Printf("MCP Server transport connected (legacy SSE), apiKey=%s", apiKey)
+		// 这里的 Server 应该启动来处理 transport 上的消息
+		// h.server.Server.ServeStream(transport) 
 	}()
 
 	// Stream messages from transport to SSE
