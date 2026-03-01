@@ -27,7 +27,6 @@ search:
 
 grpc:
   backend_target: "localhost:9090" # Java 后端 gRPC 地址
-  api_key: "sk-ys-XXX"             # 从控制台个人设置页面生成的 API Key
 
 log:
   level: "debug"
