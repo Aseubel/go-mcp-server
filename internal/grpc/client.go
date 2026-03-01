@@ -40,19 +40,19 @@ func SearchDiary(ctx context.Context, request *pb.SearchDiaryRequest) (*pb.Searc
 		return nil, fmt.Errorf("gRPC SearchDiary failed: %w", err)
 	}
 	if res.ErrorMessage != "" {
-		return nil, fmt.Errorf("后端返回错误: %s", res.ErrorMessage)
+		return nil, fmt.Errorf("后端返回错误：%s", res.ErrorMessage)
 	}
 	return res, nil
 }
 
-// QueryLifeGraph 调用后端的 QueryLifeGraph RPC 接口
-func QueryLifeGraph(ctx context.Context, request *pb.QueryLifeGraphRequest) (*pb.QueryLifeGraphResponse, error) {
-	res, err := GetClient().QueryLifeGraph(ctx, request)
+// SearchMemory 调用后端的 SearchMemory RPC 接口
+func SearchMemory(ctx context.Context, request *pb.SearchMemoryRequest) (*pb.SearchMemoryResponse, error) {
+	res, err := GetClient().SearchMemory(ctx, request)
 	if err != nil {
-		return nil, fmt.Errorf("gRPC QueryLifeGraph failed: %w", err)
+		return nil, fmt.Errorf("gRPC SearchMemory failed: %w", err)
 	}
 	if res.ErrorMessage != "" {
-		return nil, fmt.Errorf("后端返回错误: %s", res.ErrorMessage)
+		return nil, fmt.Errorf("后端返回错误：%s", res.ErrorMessage)
 	}
 	return res, nil
 }

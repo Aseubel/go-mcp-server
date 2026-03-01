@@ -33,6 +33,59 @@ log:
   level: "debug"
 ```
 
+## Proto 文件重新生成
+
+当修改了 `proto/mcp_extension.proto` 文件后，需要重新生成 Go 的 proto 代码：
+
+### Windows 系统
+
+运行批处理脚本：
+```bash
+generate_proto.bat
+```
+
+### Linux/Mac 系统
+
+运行 Shell 脚本：
+```bash
+chmod +x generate_proto.sh
+./generate_proto.sh
+```
+
+### 手动安装依赖
+
+如果脚本执行失败，请手动安装以下工具：
+
+1. 安装 protoc（Protocol Buffers 编译器）
+   - Windows: 从 https://github.com/protocolbuffers/protobuf/releases 下载
+   - Linux: `apt-get install protobuf-compiler` 或 `yum install protobuf-compiler`
+   - Mac: `brew install protobuf`
+
+2. 安装 Go 插件：
+```bash
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+```
+
+3. 确保插件在 PATH 中：
+```bash
+export PATH=$PATH:$(go env GOPATH)/bin
+```
+
+4. 编译 proto 文件：
+```bash
+protoc --go_out=. --go_opt=paths=source_relative \
+       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+       proto/mcp_extension.proto
+```
+
+## 工具列表
+
+当前 MCP 服务提供以下工具：
+
+- **diarySearch**: 根据关键词和可选的时间范围搜索用户的日记内容
+- **memorySearch**: 搜索用户的记忆信息，包括中期记忆（AI 总结的重要事件）和短期记忆上下文（最近的对话记录）
+
 ## 客户端配置示例
 
 ### Claude Desktop (MacOS / Windows)

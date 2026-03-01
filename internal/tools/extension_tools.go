@@ -89,30 +89,35 @@ func (t *SearchDiaryTool) Execute(ctx context.Context, req *mcp.CallToolRequest,
 	}, nil, nil
 }
 
-// QueryLifeGraphArgs 定义了 lifeGraph 工具的入参结构
-type QueryLifeGraphArgs struct {
-	Query string `json:"query"`
+// SearchMemoryArgs 定义了 memorySearch 工具的入参结构
+type SearchMemoryArgs struct {
+	Query      string `json:"query"`
+	MaxResults int32  `json:"maxResults,omitempty"`
 }
 
-// QueryLifeGraphTool 用于执行后端的 QueryLifeGraph gRPC 方法
-type QueryLifeGraphTool struct{}
+// SearchMemoryTool 用于执行后端的 SearchMemory gRPC 方法
+type SearchMemoryTool struct{}
 
-// NewQueryLifeGraphTool 创建一个新的 QueryLifeGraphTool 实例
-func NewQueryLifeGraphTool() *QueryLifeGraphTool {
-	return &QueryLifeGraphTool{}
+// NewSearchMemoryTool 创建一个新的 SearchMemoryTool 实例
+func NewSearchMemoryTool() *SearchMemoryTool {
+	return &SearchMemoryTool{}
 }
 
 // GetToolDef 返回该工具在 MCP 中注册的定义
-func (t *QueryLifeGraphTool) GetToolDef() *mcp.Tool {
+func (t *SearchMemoryTool) GetToolDef() *mcp.Tool {
 	return &mcp.Tool{
-		Name:        "lifeGraph",
-		Description: "查询用户的生命图谱（时空关系知识库），基于你的查询问题，获取关于人际关系、事件和重要实体的长程记忆上下文信息。",
+		Name:        "memorySearch",
+		Description: "搜索用户的记忆信息，包括中期记忆（AI 总结的重要事件）和短期记忆上下文（最近的对话记录）。此工具综合了向量检索和对话历史，提供全面的记忆检索能力。",
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
 				"query": map[string]interface{}{
 					"type":        "string",
-					"description": "查询关键词",
+					"description": "搜索关键词或问题",
+				},
+				"maxResults": map[string]interface{}{
+					"type":        "integer",
+					"description": "最大返回结果数量（默认 10）",
 				},
 			},
 			"required": []string{"query"},
@@ -120,16 +125,22 @@ func (t *QueryLifeGraphTool) GetToolDef() *mcp.Tool {
 	}
 }
 
-// Execute 真正执行生命图谱查询请求
-func (t *QueryLifeGraphTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args QueryLifeGraphArgs) (*mcp.CallToolResult, any, error) {
+// Execute 真正执行记忆搜索请求
+func (t *SearchMemoryTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args SearchMemoryArgs) (*mcp.CallToolResult, any, error) {
 	apiKey, _ := ctx.Value("apiKey").(string)
 
-	grpcReq := &pb.QueryLifeGraphRequest{
-		ApiKey: apiKey,
-		Query:  args.Query,
+	maxResults := args.MaxResults
+	if maxResults <= 0 {
+		maxResults = 10
 	}
 
-	res, err := grpc.QueryLifeGraph(ctx, grpcReq)
+	grpcReq := &pb.SearchMemoryRequest{
+		ApiKey:     apiKey,
+		Query:      args.Query,
+		MaxResults: maxResults,
+	}
+
+	res, err := grpc.SearchMemory(ctx, grpcReq)
 	if err != nil {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -139,9 +150,14 @@ func (t *QueryLifeGraphTool) Execute(ctx context.Context, req *mcp.CallToolReque
 		}, nil, nil
 	}
 
-	textContent := res.ResultJson
+	var textContent string
+	for i, r := range res.Results {
+		textContent += fmt.Sprintf("Memory %d [Type: %s] (Score: %.2f, Source: %s):\n%s\n\n",
+			i+1, r.Type, r.Score, r.SourceId, r.Content)
+	}
+
 	if textContent == "" {
-		textContent = "No relevant context found in the life graph."
+		textContent = "No memories found matching the query."
 	}
 
 	return &mcp.CallToolResult{

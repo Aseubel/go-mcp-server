@@ -75,8 +75,8 @@ func NewMCPServer(cfg *config.MCPConfig) *MCPServer {
 	diarySearchTool := ext_tools.NewSearchDiaryTool()
 	RegisterTool(mcpSrv, diarySearchTool.GetToolDef(), diarySearchTool.Execute)
 
-	lifeGraphTool := ext_tools.NewQueryLifeGraphTool()
-	RegisterTool(mcpSrv, lifeGraphTool.GetToolDef(), lifeGraphTool.Execute)
+	memorySearchTool := ext_tools.NewSearchMemoryTool()
+	RegisterTool(mcpSrv, memorySearchTool.GetToolDef(), memorySearchTool.Execute)
 
 	return mcpSrv
 }
