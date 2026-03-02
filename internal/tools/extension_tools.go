@@ -107,7 +107,7 @@ func NewSearchMemoryTool() *SearchMemoryTool {
 func (t *SearchMemoryTool) GetToolDef() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "memorySearch",
-		Description: "搜索用户的记忆信息，包括中期记忆（AI 总结的重要事件）和短期记忆上下文（最近的对话记录）。此工具综合了向量检索和对话历史，提供全面的记忆检索能力。",
+		Description: "搜索用户的记忆信息，包括日记、人生图谱、中期记忆（AI 总结的重要事件）和短期记忆上下文（最近的对话记录）。此工具综合了向量检索和对话历史，提供全面的记忆检索能力。",
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
