@@ -6,7 +6,7 @@
 ## 功能特性
 
 - **网络搜索**: 集成了基于 Bocha、Serper 或 Google 的网络实时搜索功能。
-- **与 Java 后端集成**: 通过 gRPC 连接到基础应用后端，实现双向数据交互和功能级扩展。
+- **与 Java 后端集成**: Go MCP Server 通过 gRPC 调用 Java 后端的内部记忆函数；Java gRPC 边界负责 API Key 和 scope 鉴权。
 - **特定工具扩展**:
   - `diarySearch`: 根据关键词和可选的时间范围查询用户的日记内容。
   - `lifeGraph`: 查询用户的生命图谱（时空关系知识库）以获取人物、事件的上下文关系。
@@ -117,7 +117,7 @@ protoc --go_out=. --go_opt=paths=source_relative \
    }
    ```
 
-   *注意：如果需要鉴权，必须在 URL 中携带 api_key（推荐）或者确保客户端支持通过 Authorization 头传递。该 Key 会被透传至后端服务进行验证。*
+   *注意：如果需要鉴权，必须在 URL 中携带 api_key（推荐）或者确保客户端支持通过 Authorization 头传递。该 Key 由 Go 层透传，并由 Java gRPC 服务验证；当前 diarySearch 和 memorySearch 要求 MEMORY_READ scope。*
 
 ## 架构设计
 
@@ -126,7 +126,7 @@ MCP Server 的核心在 `server.go` 中初始化。
 
 - **基于接口的搜索机制**: `SearchTool` 内部定义了 `Provider` 接口，可以非常轻松地添加新的搜索引擎而不影响外部逻辑。
 - **无侵入的工具注册**: 工具的定义 (`GetToolDef`) 与执行 (`Execute`) 被解耦到专门的结构体中（见 `internal/tools` 和 `tools` 目录），并提供统一的注册口。
-- **与 Java 系统的无缝互调**: 基于 Protobuf / gRPC 进行跨语言通讯，可以直接查询、调用远端的业务核心域。
+- **Java 内部能力复用**: 基于 Protobuf / gRPC 调用 Java 内部函数；Go 工具不复制记忆查询、解密和权限逻辑。
 
 ## 服务端点 (Endpoints)
 
