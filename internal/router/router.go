@@ -9,7 +9,7 @@ import (
 	"mcp/internal/middleware"
 )
 
-// NewRouter 构建带中间件与全部路由的Gin路由
+// NewRouter 构建基础 Gin 路由。公共/内部入口的认证策略在 Setup 中分别绑定。
 func NewRouter(cfg *config.MCPConfig) *gin.Engine {
 	// 设置Gin模式(Release/Debug)
 	if cfg != nil && cfg.Server.Env == "prod" {
@@ -18,12 +18,8 @@ func NewRouter(cfg *config.MCPConfig) *gin.Engine {
 
 	router := gin.New()
 
-	// 添加全局中间件: Recovery, CORS, Auth
+	// Recovery 是全局能力；身份认证必须按入口分别绑定。
 	router.Use(gin.Recovery())
-	router.Use(middleware.CORS())
-	
-	// 使用 Auth 中间件提取 API Key (不进行本地校验，仅透传)
-	router.Use(middleware.Auth(""))
 
 	return router
 }
@@ -32,17 +28,35 @@ func NewRouter(cfg *config.MCPConfig) *gin.Engine {
 func Setup(cfg *config.MCPConfig, server *mcp_impl.MCPServer) *gin.Engine {
 	r := NewRouter(cfg)
 
+	expectedServiceKey := ""
+	if cfg != nil {
+		expectedServiceKey = cfg.Server.AuthAPIKey
+	}
+
 	// 健康检查接口
 	r.GET("/health", handler.Health)
 
-	// Streamable HTTP 通讯协议路由 (官方推荐)
-	mcpHandler := handler.NewMCPHandler(server)
-	r.POST("/mcp", mcpHandler.Handle)
+	// Public MCP: only user-scoped memory tools are exposed externally.
+	public := r.Group("")
+	public.Use(middleware.RequireDeveloperKey())
+	publicMCPHandler := handler.NewMCPHandler(server, mcp_impl.PublicToolSet)
+	public.POST("/mcp", publicMCPHandler.Handle)
 
-	// 传统 SSE 通讯协议路由 (为了向下兼容)
-	sseHandler := handler.NewSSEHandler(server)
-	r.GET("/sse", sseHandler.Connect)
-	r.POST("/messages", sseHandler.Message)
+	// 传统 SSE 公共入口（兼容旧客户端）。
+	publicSSEHandler := handler.NewSSEHandler(server, "/messages", "public")
+	public.GET("/sse", publicSSEHandler.Connect)
+	public.POST("/messages", publicSSEHandler.Message)
+
+	// Internal MCP: Java uses the service key and sees only deployment-scoped
+	// tools such as web_search. This route is not part of the public API.
+	internal := r.Group("/internal")
+	internal.Use(middleware.RequireServiceKey(expectedServiceKey))
+	internalMCPHandler := handler.NewMCPHandler(server, mcp_impl.InternalToolSet)
+	internal.POST("/mcp", internalMCPHandler.Handle)
+
+	internalSSEHandler := handler.NewSSEHandler(server, "/internal/messages", "internal")
+	internal.GET("/sse", internalSSEHandler.Connect)
+	internal.POST("/messages", internalSSEHandler.Message)
 
 	return r
 }

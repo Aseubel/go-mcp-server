@@ -24,7 +24,9 @@ func main() {
 
 	port := fmt.Sprintf("%d", cfg.Server.Port)
 	log.Info(fmt.Sprintf("正在启动 MCP 服务，基于端口 :%s", port))
-	log.Info("  - Streamable HTTP 协议: POST /mcp (推荐)")
-	log.Info("  - 传统 SSE 协议: GET /sse + POST /messages")
+	log.Info("  - 公共 MCP: POST /mcp (diarySearch, memorySearch)")
+	log.Info("  - 内部 MCP: POST /internal/mcp (web_search, service key)")
+	log.Info("  - 公共 SSE: GET /sse + POST /messages")
+	log.Info("  - 内部 SSE: GET /internal/sse + POST /internal/messages")
 	r.Run(":" + port)
 }

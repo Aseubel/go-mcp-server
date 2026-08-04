@@ -19,6 +19,7 @@
 server:
   port: 11611
   env: "dev"
+  auth_api_key: "set-a-long-random-internal-service-key"
   
 search:
   provider: "bocha" # 支持 bocha, serper, google 等
@@ -80,16 +81,21 @@ protoc --go_out=. --go_opt=paths=source_relative \
 
 ## 工具列表
 
-当前 MCP 服务提供以下工具：
+同一个 Go MCP 进程提供两个入口，工具列表和认证方式不同：
 
-- **diarySearch**: 根据关键词和可选的时间范围搜索用户的日记内容
-- **memorySearch**: 搜索用户的记忆信息，包括中期记忆（AI 总结的重要事件）和短期记忆上下文（最近的对话记录）
+- 公共入口 `/mcp`：
+  - **diarySearch**: 根据关键词和可选的时间范围搜索当前用户的日记内容
+  - **memorySearch**: 搜索当前用户的中期记忆和短期记忆上下文
+- 内部入口 `/internal/mcp`：
+  - **web_search**: 供 Java 后端使用的网络搜索工具
+
+公共入口使用用户 Developer API Key；内部入口使用 `X-MCP-Service-Key`。公共入口不会返回或执行 `web_search`，内部入口不会返回或执行记忆工具。
 
 ## 客户端配置示例
 
 ### Claude Desktop (MacOS / Windows)
 
-本服务支持通过 SSE (Server-Sent Events) 协议接入 Claude Desktop。
+外部客户端应通过反向代理发布的 HTTPS 公共入口接入；推荐使用 Streamable HTTP。
 
 1. **启动服务**
    
@@ -111,13 +117,16 @@ protoc --go_out=. --go_opt=paths=source_relative \
    {
      "mcpServers": {
        "yusi-mcp": {
-         "url": "http://localhost:11611/sse?api_key=your-secret-key"
+         "url": "https://mcp.example.com/mcp",
+         "headers": {
+           "Authorization": "Bearer <developer-key>"
+         }
        }
      }
    }
    ```
 
-   *注意：如果需要鉴权，必须在 URL 中携带 api_key（推荐）或者确保客户端支持通过 Authorization 头传递。该 Key 由 Go 层透传，并由 Java gRPC 服务验证；当前 diarySearch 和 memorySearch 要求 MEMORY_READ scope。*
+   *注意：公共入口只接受用户 Developer API Key，可通过 `Authorization: Bearer <developer-key>`、`X-Developer-API-Key` 或 `X-API-Key` 传递。`X-MCP-Service-Key` 只用于 Java 到 `/internal/mcp` 的内部调用，不应发给外部用户。*
 
 ## 架构设计
 
@@ -130,12 +139,21 @@ MCP Server 的核心在 `server.go` 中初始化。
 
 ## 服务端点 (Endpoints)
 
-MCP Server 目前支持以下访问方式：
+公共端点：
 
 - **Streamable HTTP**: `POST /mcp` （推荐使用）
 - **传统 SSE 机制**: `GET /sse` 与 `POST /messages`
+- 工具：`diarySearch`、`memorySearch`
+- 认证：Developer API Key
 
-可以在主应用或其他客户端中直接配置该 MCP 服务的访问 URL 进行调用。
+内部端点：
+
+- **Streamable HTTP**: `POST /internal/mcp` （Java 后端使用）
+- **传统 SSE 机制**: `GET /internal/sse` 与 `POST /internal/messages`
+- 工具：`web_search`
+- 认证：`X-MCP-Service-Key`
+
+公共 MCP 不要求来源登记或 CORS 白名单；用户 Agent 直接通过 HTTPS 和 Developer API Key 连接即可。若未来需要浏览器页面直连，应在反向代理层单独配置 CORS，不要把它当作 MCP 认证。生产环境应通过 HTTPS 反向代理发布公共 `/mcp`，不要公开 Java gRPC `9090`。
 
 ## 扩展与使用指南
 

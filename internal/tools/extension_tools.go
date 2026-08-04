@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"mcp/internal/grpc"
+	"mcp/internal/middleware"
 	pb "mcp/proto"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -53,7 +54,7 @@ func (t *SearchDiaryTool) GetToolDef() *mcp.Tool {
 
 // Execute 真正执行日记搜索请求
 func (t *SearchDiaryTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args SearchDiaryArgs) (*mcp.CallToolResult, any, error) {
-	apiKey, _ := ctx.Value("apiKey").(string)
+	apiKey, _ := ctx.Value(middleware.DeveloperKeyContextKey).(string)
 
 	grpcReq := &pb.SearchDiaryRequest{
 		ApiKey:    apiKey,
@@ -127,7 +128,7 @@ func (t *SearchMemoryTool) GetToolDef() *mcp.Tool {
 
 // Execute 真正执行记忆搜索请求
 func (t *SearchMemoryTool) Execute(ctx context.Context, req *mcp.CallToolRequest, args SearchMemoryArgs) (*mcp.CallToolResult, any, error) {
-	apiKey, _ := ctx.Value("apiKey").(string)
+	apiKey, _ := ctx.Value(middleware.DeveloperKeyContextKey).(string)
 
 	maxResults := args.MaxResults
 	if maxResults <= 0 {

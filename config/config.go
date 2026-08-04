@@ -15,8 +15,9 @@ type MCPConfig struct {
 }
 
 type ServerConfig struct {
-	Port int    `mapstructure:"port"`
-	Env  string `mapstructure:"env"`
+	Port       int    `mapstructure:"port"`
+	Env        string `mapstructure:"env"`
+	AuthAPIKey string `mapstructure:"auth_api_key"`
 }
 
 type SearchConfig struct {
@@ -45,6 +46,7 @@ func Load() (*MCPConfig, error) {
 	// 设置默认值
 	v.SetDefault("server.port", 11611)
 	v.SetDefault("server.env", "dev")
+	v.SetDefault("server.auth_api_key", "")
 	v.SetDefault("search.provider", "bocha")
 	v.SetDefault("grpc.backend_target", "localhost:9090")
 
@@ -55,6 +57,20 @@ func Load() (*MCPConfig, error) {
 	// 将诸如 search.provider 映射为 SEARCH_PROVIDER 环境变量
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
+	for key, envName := range map[string]string{
+		"server.port":         "SERVER_PORT",
+		"server.env":          "SERVER_ENV",
+		"server.auth_api_key": "SERVER_AUTH_API_KEY",
+		"search.provider":     "SEARCH_PROVIDER",
+		"search.api_key":      "SEARCH_API_KEY",
+		"search.cx":           "SEARCH_CX",
+		"grpc.backend_target": "GRPC_BACKEND_TARGET",
+		"log.level":           "LOG_LEVEL",
+	} {
+		if err := v.BindEnv(key, envName); err != nil {
+			return nil, fmt.Errorf("绑定环境变量 %s 失败: %w", envName, err)
+		}
+	}
 
 	// 读取配置文件
 	if err := v.ReadInConfig(); err != nil {
@@ -67,6 +83,9 @@ func Load() (*MCPConfig, error) {
 	var cfg MCPConfig
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("无法将解析出的配置映射为结构体: %w", err)
+	}
+	if strings.TrimSpace(cfg.Server.AuthAPIKey) == "" {
+		return nil, fmt.Errorf("server.auth_api_key is required")
 	}
 
 	return &cfg, nil

@@ -6,11 +6,13 @@ services:
     image: yusi-mcp:latest
     container_name: yusi-mcp
     restart: unless-stopped
-    ports:
-      - "11611:11611"
+    expose:
+      - "11611"
     environment:
       - GIN_MODE=release
       - TZ=Asia/Shanghai
+      - SERVER_ENV=prod
+      - SERVER_AUTH_API_KEY=${MCP_AUTH_API_KEY:?MCP_AUTH_API_KEY is required}
       - GRPC_BACKEND_TARGET=yusi:9090
     # volumes:
     #   - ./config:/app/config:ro  # 挂载配置文件（如需要）

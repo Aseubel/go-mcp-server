@@ -6,21 +6,26 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
 	mcp_impl "mcp"
+	"mcp/internal/middleware"
 )
 
 // MCPHandler handles the Streamable HTTP MCP endpoint.
 type MCPHandler struct {
-	server *mcp_impl.MCPServer
+	server       *mcp_impl.MCPServer
+	allowedTools mcp_impl.ToolSet
 }
 
+const maxMCPRequestBytes = 1 << 20
+
 // NewMCPHandler creates a new MCP handler.
-func NewMCPHandler(server *mcp_impl.MCPServer) *MCPHandler {
-	return &MCPHandler{server: server}
+func NewMCPHandler(server *mcp_impl.MCPServer, allowedTools mcp_impl.ToolSet) *MCPHandler {
+	return &MCPHandler{server: server, allowedTools: allowedTools}
 }
 
 // jsonrpcRequest represents a JSON-RPC 2.0 request.
@@ -40,9 +45,10 @@ type toolCallParams struct {
 // Handle processes MCP requests via Streamable HTTP Transport.
 // Single POST endpoint with SSE response.
 func (h *MCPHandler) Handle(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxMCPRequestBytes)
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		c.JSON(500, gin.H{"error": "failed to read body"})
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "request body too large"})
 		return
 	}
 
@@ -115,7 +121,7 @@ func (h *MCPHandler) handleInitialize(id interface{}) map[string]interface{} {
 
 // handleToolsList handles the tools/list method.
 func (h *MCPHandler) handleToolsList(id interface{}) map[string]interface{} {
-	tools := h.server.GetTools()
+	tools := h.server.GetToolsFrom(h.allowedTools)
 	toolList := make([]map[string]interface{}, 0, len(tools))
 	for _, tool := range tools {
 		toolList = append(toolList, map[string]interface{}{
@@ -140,29 +146,16 @@ func (h *MCPHandler) handleToolsCall(c *gin.Context, id interface{}, params json
 		return h.errorResponse(id, -32602, "Invalid params")
 	}
 
-	// 从中间件中获取 apiKey
-	apiKey := c.GetString("apiKey")
-	
-	// 如果中间件没有提取到（理论上不可能，如果中间件正确运行），尝试手动提取作为后备
-	if apiKey == "" {
-		apiKey = c.Query("api_key")
-		if apiKey == "" {
-			apiKey = c.GetHeader("X-API-Key")
-		}
-		if apiKey == "" {
-			apiKey = c.GetHeader("Authorization")
-			if len(apiKey) > 7 && apiKey[:7] == "Bearer " {
-				apiKey = apiKey[7:]
-			}
-		}
-	}
+	// The service key authenticates this gateway. Only the separate developer
+	// key is forwarded to Java for user-scoped extension tools.
+	developerKey := c.GetString(middleware.DeveloperKeyContextKey)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 
-	ctx = context.WithValue(ctx, "apiKey", apiKey)
+	ctx = context.WithValue(ctx, middleware.DeveloperKeyContextKey, developerKey)
 
-	result, err := h.server.CallTool(ctx, callParams.Name, callParams.Arguments)
+	result, err := h.server.CallToolFrom(ctx, callParams.Name, callParams.Arguments, h.allowedTools)
 	if err != nil {
 		return h.errorResponse(id, -32603, err.Error())
 	}

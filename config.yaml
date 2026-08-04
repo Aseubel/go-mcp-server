@@ -1,6 +1,7 @@
 server:
   port: 11611
   env: "dev"
+  auth_api_key: "" # 仅内部 /internal/mcp，生产环境通过 SERVER_AUTH_API_KEY 注入
 
 search:
   provider: bocha

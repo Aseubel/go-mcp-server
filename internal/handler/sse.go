@@ -14,33 +14,34 @@ import (
 
 // SSEHandler handles the legacy SSE transport endpoints.
 type SSEHandler struct {
-	server *mcp_impl.MCPServer
+	server      *mcp_impl.MCPServer
+	messagePath string
+	route       string
 }
 
 // NewSSEHandler creates a new SSE handler.
-func NewSSEHandler(server *mcp_impl.MCPServer) *SSEHandler {
-	return &SSEHandler{server: server}
+func NewSSEHandler(server *mcp_impl.MCPServer, messagePath string, route string) *SSEHandler {
+	return &SSEHandler{server: server, messagePath: messagePath, route: route}
 }
 
 // Connect handles GET /sse - establishes SSE connection.
 func (h *SSEHandler) Connect(c *gin.Context) {
-	transport := mcp_impl.NewSSEServerTransport()
+	transport := mcp_impl.NewSSEServerTransport(h.route)
 
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("Connection", "keep-alive")
 
 	// Send endpoint event
-	endpoint := fmt.Sprintf("/messages?sessionId=%s", transport.SessionID())
+	endpoint := fmt.Sprintf("%s?sessionId=%s", h.messagePath, transport.SessionID())
 	c.SSEvent("endpoint", endpoint)
 	c.Writer.Flush()
 
 	// Start serving in a goroutine
 	go func() {
-		apiKey := c.GetString("apiKey")
-		log.Printf("MCP Server transport connected (legacy SSE), apiKey=%s", apiKey)
+		log.Printf("MCP Server transport connected (legacy SSE)")
 		// 这里的 Server 应该启动来处理 transport 上的消息
-		// h.server.Server.ServeStream(transport) 
+		// h.server.Server.ServeStream(transport)
 	}()
 
 	// Stream messages from transport to SSE
@@ -66,6 +67,10 @@ func (h *SSEHandler) Message(c *gin.Context) {
 		return
 	}
 	transport := val.(*mcp_impl.SSEServerTransport)
+	if transport.Route() != h.route {
+		c.JSON(404, gin.H{"error": "session not found"})
+		return
+	}
 
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {

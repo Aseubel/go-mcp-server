@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"mcp/config"
 	"mcp/internal/grpc"
@@ -18,6 +19,30 @@ type InternalToolHandler func(ctx context.Context, argsJSON json.RawMessage) (*m
 type RegisteredTool struct {
 	Tool    *mcp.Tool
 	Handler InternalToolHandler
+}
+
+// ToolSet defines the tools exposed by one MCP endpoint.
+// The same MCP process can expose different ToolSets on different routes.
+type ToolSet map[string]struct{}
+
+const (
+	WebSearchToolName    = "web_search"
+	DiarySearchToolName  = "diarySearch"
+	MemorySearchToolName = "memorySearch"
+)
+
+// PublicToolSet contains user-scoped memory tools exposed to external MCP clients.
+var PublicToolSet = NewToolSet(DiarySearchToolName, MemorySearchToolName)
+
+// InternalToolSet contains deployment-scoped tools used by the Java service.
+var InternalToolSet = NewToolSet(WebSearchToolName)
+
+func NewToolSet(names ...string) ToolSet {
+	set := make(ToolSet, len(names))
+	for _, name := range names {
+		set[name] = struct{}{}
+	}
+	return set
 }
 
 type MCPServer struct {
@@ -83,6 +108,18 @@ func NewMCPServer(cfg *config.MCPConfig) *MCPServer {
 
 // CallTool 根据工具名称执行已注册的工具
 func (s *MCPServer) CallTool(ctx context.Context, name string, argsJSON []byte) (*mcp.CallToolResult, error) {
+	return s.CallToolFrom(ctx, name, argsJSON, nil)
+}
+
+// CallToolFrom executes a tool only when it belongs to the endpoint ToolSet.
+// A nil ToolSet keeps the unrestricted behavior for non-HTTP internal callers.
+func (s *MCPServer) CallToolFrom(ctx context.Context, name string, argsJSON []byte, allowed ToolSet) (*mcp.CallToolResult, error) {
+	if allowed != nil {
+		if _, ok := allowed[name]; !ok {
+			return nil, fmt.Errorf("tool %q is not available on this MCP endpoint", name)
+		}
+	}
+
 	tool, ok := s.Tools[name]
 	if !ok {
 		return nil, fmt.Errorf("tool not found: %s", name)
@@ -92,9 +129,26 @@ func (s *MCPServer) CallTool(ctx context.Context, name string, argsJSON []byte) 
 
 // GetTools 返回所有已注册工具的定义
 func (s *MCPServer) GetTools() []*mcp.Tool {
-	tools := make([]*mcp.Tool, 0, len(s.Tools))
-	for _, t := range s.Tools {
-		tools = append(tools, t.Tool)
+	return s.GetToolsFrom(nil)
+}
+
+// GetToolsFrom returns only tools allowed by the endpoint ToolSet.
+// A nil ToolSet keeps the unrestricted behavior for non-HTTP internal callers.
+func (s *MCPServer) GetToolsFrom(allowed ToolSet) []*mcp.Tool {
+	toolNames := make([]string, 0, len(s.Tools))
+	for name := range s.Tools {
+		if allowed != nil {
+			if _, ok := allowed[name]; !ok {
+				continue
+			}
+		}
+		toolNames = append(toolNames, name)
+	}
+	sort.Strings(toolNames)
+
+	tools := make([]*mcp.Tool, 0, len(toolNames))
+	for _, name := range toolNames {
+		tools = append(tools, s.Tools[name].Tool)
 	}
 	return tools
 }

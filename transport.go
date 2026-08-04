@@ -19,15 +19,17 @@ type SSEServerTransport struct {
 	SendChan chan any // 保持为 any 类型以提供 json.Marshal 灵活性, 但 Write 接收 jsonrpc.Message
 	recvChan chan jsonrpc.Message
 	id       string
+	route    string
 	closed   bool
 	mutex    sync.Mutex
 }
 
-func NewSSEServerTransport() *SSEServerTransport {
+func NewSSEServerTransport(route string) *SSEServerTransport {
 	t := &SSEServerTransport{
 		SendChan: make(chan any, 10),
 		recvChan: make(chan jsonrpc.Message, 10),
 		id:       uuid.New().String(),
+		route:    route,
 	}
 	TransportMap.Store(t.id, t)
 	return t
@@ -82,6 +84,10 @@ func (t *SSEServerTransport) Close() error {
 // SessionID 实现 mcp.Connection 接口
 func (t *SSEServerTransport) SessionID() string {
 	return t.id
+}
+
+func (t *SSEServerTransport) Route() string {
+	return t.route
 }
 
 // HandleMessage 将被 POST 路由调用来注入客户端发来的消息

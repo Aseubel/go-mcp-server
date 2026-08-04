@@ -1,64 +1,87 @@
 package middleware
 
 import (
+	"crypto/subtle"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-// Auth returns a middleware that checks for API Key.
-// It extracts the API Key from:
-// 1. Query parameter: "api_key=<key>"
-// 2. Authorization header: "Bearer <key>" or just "<key>"
-// 3. X-API-Key header: "<key>"
-//
-// The extracted key is stored in the context as "apiKey".
-//
-// If expectedKey is provided (non-empty), it validates the extracted key against it.
-// If expectedKey is empty, it allows any key (or no key) and just stores it if present.
-func Auth(expectedKey string) gin.HandlerFunc {
+const (
+	// ServiceKeyHeader authenticates the MCP gateway deployment.
+	ServiceKeyHeader = "X-MCP-Service-Key"
+	// DeveloperKeyHeader carries the end-user developer key to the Java boundary.
+	DeveloperKeyHeader = "X-Developer-API-Key"
+	// DeveloperKeyContextKey is the request context key used by extension tools.
+	DeveloperKeyContextKey = "developerApiKey"
+)
+
+// RequireServiceKey authenticates the internal MCP endpoint with its
+// deployment-level service key. It does not identify an end user.
+func RequireServiceKey(expectedKey string) gin.HandlerFunc {
+	configuredKey := strings.TrimSpace(expectedKey)
+
 	return func(c *gin.Context) {
-		var clientKey string
-
-		// 1. Check Query Parameter
-		clientKey = c.Query("api_key")
-
-		// 2. Check Authorization Header
-		if clientKey == "" {
-			authHeader := c.GetHeader("Authorization")
-			if authHeader != "" {
-				parts := strings.SplitN(authHeader, " ", 2)
-				if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
-					clientKey = parts[1]
-				} else {
-					// Some clients might send the key directly in Authorization header
-					clientKey = authHeader
-				}
-			}
+		if c.Request.Method == http.MethodOptions || c.Request.URL.Path == "/health" {
+			c.Next()
+			return
 		}
 
-		// 3. Check X-API-Key Header
-		if clientKey == "" {
-			clientKey = c.GetHeader("X-API-Key")
+		serviceKey := strings.TrimSpace(c.GetHeader(ServiceKeyHeader))
+		if configuredKey == "" || serviceKey == "" || len(serviceKey) != len(configuredKey) ||
+			subtle.ConstantTimeCompare([]byte(serviceKey), []byte(configuredKey)) != 1 {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: Invalid or missing MCP service key"})
+			return
 		}
 
-		// Store the key in context for downstream handlers/tools
-		if clientKey != "" {
-			c.Set("apiKey", clientKey)
-		}
-
-		// Validation logic
-		if expectedKey != "" {
-			// If server is configured with a key, enforce it
-			if clientKey == "" || clientKey != expectedKey {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: Invalid or missing API Key"})
-				return
-			}
-		}
-
-		// If expectedKey is empty, we allow the request to proceed.
-		// The clientKey (if any) is available in the context for tools to use (e.g. for forwarding to backend).
 		c.Next()
 	}
+}
+
+// RequireDeveloperKey authenticates the public MCP endpoint at the gateway
+// boundary. Java performs the authoritative key lookup and scope check when a
+// user-scoped tool is called.
+func RequireDeveloperKey() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.Method == http.MethodOptions {
+			c.Next()
+			return
+		}
+
+		developerKey := extractDeveloperKey(c)
+		if developerKey == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: Missing developer API key"})
+			return
+		}
+
+		c.Set(DeveloperKeyContextKey, developerKey)
+		c.Next()
+	}
+}
+
+// Auth is retained as an internal compatibility alias for callers that used
+// the previous service-key-only middleware.
+func Auth(expectedKey string) gin.HandlerFunc {
+	return RequireServiceKey(expectedKey)
+}
+
+func extractDeveloperKey(c *gin.Context) string {
+	developerKey := strings.TrimSpace(c.GetHeader(DeveloperKeyHeader))
+	if developerKey == "" {
+		// Keep the existing header usable for user-scoped developer keys.
+		developerKey = strings.TrimSpace(c.GetHeader("X-API-Key"))
+	}
+	if developerKey == "" {
+		developerKey = bearerToken(c.GetHeader("Authorization"))
+	}
+	return developerKey
+}
+
+func bearerToken(value string) string {
+	parts := strings.Fields(value)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return ""
+	}
+	return strings.TrimSpace(parts[1])
 }
