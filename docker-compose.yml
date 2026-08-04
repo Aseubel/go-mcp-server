@@ -1,3 +1,5 @@
+# Run from the repository root with:
+# docker compose --env-file yusi_prod.env -f mcp/docker-compose.yml up -d
 services:
   mcp-server:
     build:
@@ -12,8 +14,12 @@ services:
       - GIN_MODE=release
       - TZ=Asia/Shanghai
       - SERVER_ENV=prod
+      - LOG_LEVEL=info
       - SERVER_AUTH_API_KEY=${MCP_AUTH_API_KEY:?MCP_AUTH_API_KEY is required}
-      - GRPC_BACKEND_TARGET=yusi:9090
+      - GRPC_BACKEND_TARGET=${GRPC_BACKEND_TARGET:-yusi:9090}
+      - SEARCH_PROVIDER=${SEARCH_PROVIDER:-bocha}
+      - SEARCH_API_KEY=${SEARCH_API_KEY:?SEARCH_API_KEY is required}
+      - SEARCH_CX=${SEARCH_CX:-}
     # volumes:
     #   - ./config:/app/config:ro  # 挂载配置文件（如需要）
     healthcheck:
